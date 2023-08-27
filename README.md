@@ -1,4 +1,6 @@
-# ublue-os/lorax-compose: compose images using lorax for OSTree Native Container images
+# ublue-os/lorax-compose
+
+## Overview
 
 Hi! Are you creating your own flavor of Universal Blue? Do you want to make it feel like a "real OS" by providing an OS installer? Look no more! You are in the right place.
 
