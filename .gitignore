@@ -1,0 +1,11 @@
+.idea
+el_torito.log
+*.iso
+*.sha256sum
+lorax.conf
+*.log
+*-pkgsizes.txt
+build
+debugdata
+pkglists
+.*.sw[opqrstuvwxyz]

@@ -1,0 +1,14 @@
+aria2
+curl
+isomd5sum
+jq
+parted
+python3-jinja2-cli
+python3-pyyaml
+ShellCheck
+tree
+xorriso
+lorax
+ostree
+skopeo
+rpm-ostree

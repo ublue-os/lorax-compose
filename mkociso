@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+
+from argparse import ArgumentParser
+from logging import basicConfig, getLogger, INFO
+from os import getcwd
+from shutil import move
+from subprocess import run
+from requests import get
+
+basicConfig(level=INFO)
+logger = getLogger("mkociso")
+
+def main():
+    arg_parser = ArgumentParser()
+    arg_parser.add_argument(
+        "-r",
+        "--release",
+        choices=[38, 39, 40],
+        default=38,
+        type=int,
+        help="Fedora release",
+    )
+    arg_parser.add_argument(
+        "-i",
+        "--image",
+        required=True,
+        help="Container image to use for installation",
+    )
+    arg_parser.add_argument(
+        "-a",
+        "--arch",
+        default="x86_64",
+        help="Target architecture",
+    )
+    arg_parser.add_argument(
+        "-o",
+        "--output",
+        help="Output directory",
+        default=getcwd(),
+    )
+
+    cli_args = arg_parser.parse_args()
+
+    image_variant = cli_args.image.split("/")[-1].split("-")[0]
+    logger.info(f"building image variant: {image_variant}")
+
+    mirror = select_mirror(cli_args.arch, cli_args.release)
+    logger.info(f"selected mirror {mirror}")
+
+    PWD = getcwd()
+    vol_id = f"UBlue-{image_variant}-{cli_args.release}-{cli_args.arch}"
+
+    lorax_cmd = [
+        "lorax",
+        "--product=Fedora",
+        f"--version={cli_args.release}",
+        f"--release={cli_args.release}",
+        f"--source={mirror}",
+        f"--variant={image_variant}",
+        "--nomacboot",
+        f"--volid={vol_id}",
+        "--rootfs-size", "8",
+        "--force",
+        "--add-template-var", f"ostree_oci_ref={cli_args.image}",
+        "--add-template-var", "ostree_osname=universalblue",
+        "--add-template", f"{PWD}/lorax-templates/ostree-based-installer/lorax-configure-repo.tmpl",
+        "--add-template", f"{PWD}/lorax-templates/ostree-based-installer/lorax-embed-repo.tmpl",
+        f"build/offline_{image_variant}"
+    ]
+
+    logger.debug(lorax_cmd)
+    run(lorax_cmd)
+    move(f"build/offline_{image_variant}/images/boot.iso", f"{cli_args.output}/{vol_id}.iso")
+    logger.info(f"produced {cli_args.output}/{vol_id}.iso")
+
+    checksum_result = run(["sha256sum", "--tag", f"{vol_id}.iso"], capture_output=True)
+    with open(f"{cli_args.output}/{vol_id}.iso.sha256sum", "w") as checksum_file:
+        print(checksum_result.stdout.decode("utf-8"), file=checksum_file)
+        logger.info(f"produced sha256sum {cli_args.output}/{vol_id}.iso.sha256sum")
+
+    print(f"ISO_FILENAME={cli_args.output}/{vol_id}.iso")
+    print(f"SHA256_FILENAME={cli_args.output}/{vol_id}.iso.sha256sum")
+
+def select_mirror(arch, release):
+    mirror_list = get(f"https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-{release}&arch={arch}")
+    return mirror_list.text.split("\n")[1]
+
+if __name__ == "__main__":
+    main()

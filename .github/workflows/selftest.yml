@@ -1,0 +1,32 @@
+name: self-test action
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  selftest:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:38
+      options: --privileged -v /dev:/dev
+    steps:
+      - name: checkout to execute local action
+        uses: actions/checkout@v3
+      - name: do selftest of the action
+        uses: ./
+        id: selftest
+        with:
+          fedora-release: 38
+          ostree-oci-ref: ghcr.io/ublue-os/silverblue-main:38
+
+      - name: upload test result as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: ${{ steps.selftest.outputs.iso-name }}
+          name: ${{ steps.selftest.outputs.iso-name }}

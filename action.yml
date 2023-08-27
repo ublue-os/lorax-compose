@@ -1,0 +1,50 @@
+name: lorax-compose
+description: 'Compose a Fedora ISO using Lorax'
+
+inputs:
+  ostree-oci-ref:
+    description: 'OSTree OCI Ref pointing to ostree native container image'
+    required: true
+  fedora-release:
+    description: 'Fedora Release to Target'
+    required: true
+  cpu-arch:
+    description: 'CPU architecture for installer'
+    required: false
+    default: x86_64
+  output-dir:
+    description: "Output directory"
+    default: "${{ github.workspace }}"
+
+runs:
+  using: composite
+  steps:
+    - name: Install Dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        PACKAGES=$(cat deps.txt)
+        dnf install \
+          --disablerepo='*' \
+          --enablerepo='fedora,updates' \
+          --setopt install_weak_deps=0 \
+          --assumeyes \
+          $PACKAGES
+        
+    - name: call mkociso to generate installer image
+      shell: bash
+      id: build
+      working-directory: ${{ github.action_path }}
+      run: |
+        ./mkociso \
+          --release ${{ inputs.fedora-release }} \
+          --arch ${{ inputs.cpu-arch }} \
+          --image ${{ inputs.ostree-oci-ref }} \
+          --output ${{ inputs.output-dir }} >> $GITHUB_OUTPUT
+outputs:
+  sha256sum-path:
+    description: 'Path to the calculated sha256sum'
+    value: ${{ steps.build.outputs.SHA256SUM_FILENAME }}
+  iso-path:
+    description: 'Path to the generated ISO'
+    value: ${{ steps.build.outputs.ISO_FILENAME }}

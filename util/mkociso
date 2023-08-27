@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if ! sudo podman image exists lorax-compose:offline; then
+    sudo podman build --target offline_builder -t lorax-compose:offline .
+fi
+
+sudo podman run \
+    --rm \
+    -it \
+    --security-opt label=disable \
+    -v /dev:/dev \
+    -v "$PWD:$PWD" \
+    -w "$PWD" \
+    -e PWD \
+    --privileged \
+    lorax-compose:offline mkociso "$@"
