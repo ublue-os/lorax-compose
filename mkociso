@@ -2,7 +2,7 @@
 
 from argparse import ArgumentParser
 from logging import basicConfig, getLogger, INFO
-from os import getcwd
+from os import getcwd, getenv
 from shutil import move
 from subprocess import run
 from requests import get
@@ -48,6 +48,7 @@ def main():
     logger.info(f"selected mirror {mirror}")
 
     PWD = getcwd()
+    GITHUB_WORKSPACE = getenv("GITHUB_WORKSPACE", PWD)
     vol_id = f"UBlue-{image_variant}-{cli_args.release}-{cli_args.arch}"
 
     lorax_cmd = [
@@ -65,12 +66,12 @@ def main():
         "--add-template-var", "ostree_osname=universalblue",
         "--add-template", f"{PWD}/lorax-templates/ostree-based-installer/lorax-configure-repo.tmpl",
         "--add-template", f"{PWD}/lorax-templates/ostree-based-installer/lorax-embed-repo.tmpl",
-        f"{PWD}/build/offline_{image_variant}"
+        f"{GITHUB_WORKSPACE}/build/offline_{image_variant}"
     ]
 
     logger.debug(lorax_cmd)
     run(lorax_cmd)
-    move(f"{PWD}/build/offline_{image_variant}/images/boot.iso", f"{cli_args.output}/{vol_id}.iso")
+    move(f"{GITHUB_WORKSPACE}/build/offline_{image_variant}/images/boot.iso", f"{cli_args.output}/{vol_id}.iso")
     logger.info(f"produced {cli_args.output}/{vol_id}.iso")
 
     checksum_result = run(["sha256sum", "--tag", f"{cli_args.output}/{vol_id}.iso"], capture_output=True)
