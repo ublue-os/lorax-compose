@@ -65,15 +65,15 @@ def main():
         "--add-template-var", "ostree_osname=universalblue",
         "--add-template", f"{PWD}/lorax-templates/ostree-based-installer/lorax-configure-repo.tmpl",
         "--add-template", f"{PWD}/lorax-templates/ostree-based-installer/lorax-embed-repo.tmpl",
-        f"build/offline_{image_variant}"
+        f"{PWD}/build/offline_{image_variant}"
     ]
 
     logger.debug(lorax_cmd)
     run(lorax_cmd)
-    move(f"build/offline_{image_variant}/images/boot.iso", f"{cli_args.output}/{vol_id}.iso")
+    move(f"{PWD}/build/offline_{image_variant}/images/boot.iso", f"{cli_args.output}/{vol_id}.iso")
     logger.info(f"produced {cli_args.output}/{vol_id}.iso")
 
-    checksum_result = run(["sha256sum", "--tag", f"{vol_id}.iso"], capture_output=True)
+    checksum_result = run(["sha256sum", "--tag", f"{cli_args.output}/{vol_id}.iso"], capture_output=True)
     with open(f"{cli_args.output}/{vol_id}.iso.sha256sum", "w") as checksum_file:
         print(checksum_result.stdout.decode("utf-8"), file=checksum_file)
         logger.info(f"produced sha256sum {cli_args.output}/{vol_id}.iso.sha256sum")
