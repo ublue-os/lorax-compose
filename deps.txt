@@ -12,3 +12,4 @@ lorax
 ostree
 skopeo
 rpm-ostree
+python-boto3

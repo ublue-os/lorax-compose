@@ -1,10 +1,10 @@
 #!/bin/bash
 
-if ! sudo podman image exists lorax-compose:offline; then
-    sudo podman build --target offline_builder -t lorax-compose:offline .
+if ! podman image exists lorax-compose:offline; then
+    podman build --target offline_builder -t lorax-compose:offline .
 fi
 
-sudo podman run \
+podman run \
     --rm \
     -it \
     --security-opt label=disable \

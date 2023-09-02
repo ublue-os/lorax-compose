@@ -1,8 +1,6 @@
 FROM fedora:38 as offline_builder
 
-
 COPY ./deps.txt /tmp/deps.txt
-COPY ./mkociso /usr/local/bin/mkociso
 
 RUN dnf install \
         --disablerepo='*' \
@@ -10,6 +8,8 @@ RUN dnf install \
         --setopt install_weak_deps=0 \
         --assumeyes \
         $(cat /tmp/deps.txt)
+
+COPY ./mkociso /usr/local/bin/mkociso
 
 FROM offline_builder as netinstall_builder 
 

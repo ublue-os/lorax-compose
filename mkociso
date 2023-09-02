@@ -13,6 +13,12 @@ logger = getLogger("mkociso")
 def main():
     arg_parser = ArgumentParser()
     arg_parser.add_argument(
+        "-d",
+        "--dry-run",
+        action="store_true",
+        default=False,
+    )
+    arg_parser.add_argument(
         "-r",
         "--release",
         choices=[38, 39, 40],
@@ -38,10 +44,23 @@ def main():
         help="Output directory",
         default=getcwd(),
     )
+    arg_parser.add_argument(
+        "-w",
+        "--web",
+        action="store_true",
+        help="Use anaconda web installer [EXPERIMENTAL]",
+    )
+    arg_parser.add_argument(
+        "-n",
+        "--net",
+        action="store_true",
+        default=False,
+        help="Create netinstaller with boot_menu.yml",
+    )
 
     cli_args = arg_parser.parse_args()
 
-    image_variant = cli_args.image.split("/")[-1].split("-")[0]
+    image_variant = cli_args.image.split("/")[-1].split(":")[0]
     logger.info(f"building image variant: {image_variant}")
 
     mirror = select_mirror(cli_args.arch, cli_args.release)
@@ -57,30 +76,41 @@ def main():
         f"--version={cli_args.release}",
         f"--release={cli_args.release}",
         f"--source={mirror}",
-        f"--variant={image_variant}",
+        f"--mirrorlist=https://mirrors.rpmfusion.org/mirrorlist?repo=nonfree-fedora-{cli_args.release}&arch={cli_args.arch}",
         "--nomacboot",
-        f"--volid={vol_id}",
+        f"--volid={vol_id[:31]}",
         "--rootfs-size", "8",
         "--force",
         "--add-template-var", f"ostree_oci_ref={cli_args.image}",
         "--add-template-var", "ostree_osname=universalblue",
         "--add-template", f"{PWD}/lorax-templates/ostree-based-installer/lorax-configure-repo.tmpl",
         "--add-template", f"{PWD}/lorax-templates/ostree-based-installer/lorax-embed-repo.tmpl",
+        "--installpkgs", "glibc-langpack-*",
+        "--installpkgs", "langpacks-*",
         f"{GITHUB_WORKSPACE}/build/offline_{image_variant}"
     ]
 
-    logger.debug(lorax_cmd)
-    run(lorax_cmd)
-    move(f"{GITHUB_WORKSPACE}/build/offline_{image_variant}/images/boot.iso", f"{cli_args.output}/{vol_id}.iso")
-    logger.info(f"produced {cli_args.output}/{vol_id}.iso")
+    logger.info("calling lorax")
+    logger.info(" ".join(lorax_cmd))
 
-    checksum_result = run(["sha256sum", "--tag", f"{cli_args.output}/{vol_id}.iso"], capture_output=True)
-    with open(f"{cli_args.output}/{vol_id}.iso.sha256sum", "w") as checksum_file:
-        print(checksum_result.stdout.decode("utf-8"), file=checksum_file)
-        logger.info(f"produced sha256sum {cli_args.output}/{vol_id}.iso.sha256sum")
+    if not cli_args.dry_run:
+        run(lorax_cmd)
 
-    print(f"ISO_FILENAME={cli_args.output}/{vol_id}.iso")
-    print(f"SHA256_FILENAME={cli_args.output}/{vol_id}.iso.sha256sum")
+    if not cli_args.output.startswith("s3://"):
+        move(f"{GITHUB_WORKSPACE}/build/offline_{image_variant}/images/boot.iso", f"{cli_args.output}/{vol_id}.iso")
+        logger.info(f"produced {cli_args.output}/{vol_id}.iso")
+
+        checksum_result = run(["sha256sum", "--tag", f"{cli_args.output}/{vol_id}.iso"], capture_output=True)
+        with open(f"{cli_args.output}/{vol_id}.iso.sha256sum", "w") as checksum_file:
+            print(checksum_result.stdout.decode("utf-8"), file=checksum_file)
+            logger.info(f"produced sha256sum {cli_args.output}/{vol_id}.iso.sha256sum")
+
+        print(f"ISO_FILENAME={cli_args.output}/{vol_id}.iso")
+        print(f"SHA256_FILENAME={cli_args.output}/{vol_id}.iso.sha256sum")
+
+    else:
+        logger.info(f"uploading to {cli_args.output}/{vol_id}.iso")
+
 
 def select_mirror(arch, release):
     mirror_list = get(f"https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-{release}&arch={arch}")

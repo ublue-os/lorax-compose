@@ -15,6 +15,19 @@ inputs:
   output-dir:
     description: "Output directory"
     default: "${{ github.workspace }}"
+  add-arch-template:
+    description: "Absolute paths to lorax template to pass to --add-arch-template, separated by newline."
+    default: ""
+  add-arch-template-var:
+    description: "Variables to pass to --add-arch-template-var in the form 'var=value' separated by newline"
+    default: ""
+  # These two options can be used for advance manipulations of the install runtime by allowing us to hijack the default lorax templates
+  efi-tmpl:
+    description: "Override for /usr/share/lorax/templates.d/99-generic/efi.tmpl"
+    default: ""
+  x86-tmpl:
+    description: "Override for /usr/share/lorax/templates.d/99-generic/x86.tmpl"
+    default: ""
 
 runs:
   using: composite
